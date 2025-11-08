@@ -9,22 +9,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout repository
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Step 2: Set up Docker Buildx
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # Step 3: Log in to Docker Hub
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # Step 4: Build and push Docker image to Docker Hub
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
@@ -32,8 +28,7 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/cicd:latest
 
-      # Step 5: Deploy to EC2 and restart Docker service
-      - name: Deploy and restart CICD service on EC2
+      - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -42,15 +37,20 @@ jobs:
           script: |
             set -e
 
-            echo "🔄 Pulling latest Docker image..."
-            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/cicd:latest
+            echo "🔐 Logging in to Docker..."
+            echo "${{ secrets.DOCKERHUB_TOKEN }}" | sudo docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
 
-            echo "🛑 Stopping old container (if running)..."
+            echo "🧹 Cleaning up old containers..."
             sudo docker stop cicd || true
             sudo docker rm cicd || true
+
+            echo "📦 Pulling latest image..."
+            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/cicd:latest
 
             echo "🚀 Starting new container..."
             sudo docker run -d --name cicd -p 3000:3000 ${{ secrets.DOCKERHUB_USERNAME }}/cicd:latest
 
-            echo "✅ Deployment complete! Running containers:"
+            echo "🔍 Verifying container status..."
             sudo docker ps
+
+            echo "✅ Deployment finished successfully."
