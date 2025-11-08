@@ -5,5 +5,4 @@ app.get("/", (req, res) => {
   res.json({ message: "Hello from Dockerized Node.js on EC2!" });
 });
 
-const port = process.env.PORT || 3000;
 app.listen(3000, "0.0.0.0", () => console.log("Server running on port 3000"));
